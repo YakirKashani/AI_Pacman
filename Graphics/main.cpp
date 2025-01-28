@@ -35,7 +35,7 @@ bool runPacman = false;
 bool gameOn = false;
 
 const int PACMAN_SEARCH_DEPTH = 5;
-//queue <Cell*> grays;
+
 vector<Cell*> dfs_grays;
 
 queue <pair<Cell*,int>> PacmanGrays;
@@ -97,7 +97,6 @@ double Distance(double x1, double y1, double x2, double y2) {
 void init()
 {
 	glClearColor(0.5,0.5,0.5,0);// color of window background
-//	glOrtho(-1, 1, -1, 1, -1, 1); // set the coordinates system
 	glOrtho(0, MSZ, 0, MSZ, -1, 1); // set the coordinates system
 
 	srand(time(0));
@@ -147,10 +146,15 @@ void display()
 }
 
 int RestoreGhostPath(Cell* pc, int ghostNum) { //BUG HERE!
+
+	if (pc->getParent() == nullptr)
+		return -1;
+
 	while (pc->getParent()->getParent() != nullptr) {
-		maze[pc->getRow()][pc->getCol()].setGhostSign(ghostNum,PATH);
+		maze[pc->getRow()][pc->getCol()].setGhostSign(ghostNum, PATH);
 		pc = pc->getParent();
 	}
+
 	maze[pc->getRow()][pc->getCol()].setGhostSign(ghostNum, PATH);
 	if (pc->getRow() - pc->getParent()->getRow() == 1) //UP
 		return UP;
@@ -167,9 +171,9 @@ bool CheckForCollision() {
 	int pacmanCol = pacman->getCol();
 	for (int i = 0;i < NUM_GHOSTS;i++)
 	{
-		if (pacmanRow == ghosts[i]->getRow() && abs(pacmanCol - ghosts[i]->getCol() == 1) ||
-			pacmanCol == ghosts[i]->getCol() && abs(pacmanRow - ghosts[i]->getRow() == 1)
-			) {
+		if (pacmanRow == ghosts[i]->getRow() && abs(pacmanCol - ghosts[i]->getCol()) == 1 ||
+			pacmanCol == ghosts[i]->getCol() && abs(pacmanRow - ghosts[i]->getRow()) == 1)
+			 {
 			gameOn = false;
 			cout << "Pacman lost" << endl;
 			return false;
@@ -179,26 +183,28 @@ bool CheckForCollision() {
 }
 
 void MoveGhostToPacman(int direction, int ghostNum) {
-	maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(SPACE);
-	if (direction == UP)
-	{
-		ghosts[ghostNum]->setRow(ghosts[ghostNum]->getRow() + 1);
-		maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
-	}
-	else if (direction == DOWN)
-	{
-		ghosts[ghostNum]->setRow(ghosts[ghostNum]->getRow() -1);
-		maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
-	}
-	else if (direction == LEFT)
-	{
-		ghosts[ghostNum]->setCol(ghosts[ghostNum]->getCol() -1);
-		maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
-	}
-	else if (direction == RIGHT)
-	{
-		ghosts[ghostNum]->setCol(ghosts[ghostNum]->getCol() + 1);
-		maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
+	if (direction != -1) {
+		maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(SPACE);
+		if (direction == UP)
+		{
+			ghosts[ghostNum]->setRow(ghosts[ghostNum]->getRow() + 1);
+			maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
+		}
+		else if (direction == DOWN)
+		{
+			ghosts[ghostNum]->setRow(ghosts[ghostNum]->getRow() - 1);
+			maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
+		}
+		else if (direction == LEFT)
+		{
+			ghosts[ghostNum]->setCol(ghosts[ghostNum]->getCol() - 1);
+			maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
+		}
+		else if (direction == RIGHT)
+		{
+			ghosts[ghostNum]->setCol(ghosts[ghostNum]->getCol() + 1);
+			maze[ghosts[ghostNum]->getRow()][ghosts[ghostNum]->getCol()].setBoardInt(GHOST);
+		}
 	}
 }
 
@@ -317,36 +323,37 @@ void RunPacmanBFS(queue<Cell*>(&ghostsFound), Cell* (&closestCoin)) {
 		cout << "There is no solution. Priority queue is empty.\n";
 		return;
 	}
-	while(!PacmanGrays.empty()){
-		auto currentPair = PacmanGrays.front();
-		PacmanGrays.pop();
-		pCurrent = currentPair.first;
-		int currentDepth = currentPair.second;
+	else {
+		while (!PacmanGrays.empty()) {
+			auto currentPair = PacmanGrays.front();
+			PacmanGrays.pop();
+			pCurrent = currentPair.first;
+			int currentDepth = currentPair.second;
 
-		if (currentDepth >= PACMAN_SEARCH_DEPTH) // stop processing if we've reached the maximum depth
-			break;
-		// 1. paint pCurrent black
-		
-		row = pCurrent->getRow();
-		col = pCurrent->getCol();
-		if (maze[row][col].getBoardInt() != PACMAN)
-			maze[row][col].setPacmanSign(PACMAN_BLACK);
-		// 2. check all the neighbors of pCurrent
-		// go up
-		if (maze[row + 1][col].getPacmanSign() == SPACE && (maze[row + 1][col].getIsCoin() || maze[row + 1][col].getBoardInt() == GHOST || maze[row + 1][col].getBoardInt() == SPACE)) {
-			PacmanBFSCheckNeighbor(row + 1, col, pCurrent, ghostsFound, closestCoin, currentDepth);
-		}
-		// down
-		if (maze[row - 1][col].getPacmanSign() == SPACE && (maze[row - 1][col].getIsCoin() || maze[row - 1][col].getBoardInt() == GHOST || maze[row - 1][col].getBoardInt() == SPACE)) {
-			PacmanBFSCheckNeighbor(row - 1, col, pCurrent, ghostsFound, closestCoin, currentDepth);
-		}
-		// left
-		if (maze[row][col - 1].getPacmanSign() == SPACE && (maze[row][col - 1].getIsCoin() || maze[row][col - 1].getBoardInt() == GHOST || maze[row][col-1].getBoardInt() == SPACE)) {
-			PacmanBFSCheckNeighbor(row, col - 1, pCurrent, ghostsFound, closestCoin, currentDepth);
-		}
-		// right
-		if (maze[row][col + 1].getPacmanSign() == SPACE && (maze[row][col + 1].getIsCoin() || maze[row][col + 1].getBoardInt() == GHOST || maze[row][col+1].getBoardInt() == SPACE)) {
-			PacmanBFSCheckNeighbor(row, col + 1, pCurrent, ghostsFound, closestCoin, currentDepth);
+			if (currentDepth >= PACMAN_SEARCH_DEPTH) // stop processing if we've reached the maximum depth
+				break;
+			// 1. paint pCurrent black
+			row = pCurrent->getRow();
+			col = pCurrent->getCol();
+			if (maze[row][col].getBoardInt() != PACMAN)
+				maze[row][col].setPacmanSign(PACMAN_BLACK);
+			// 2. check all the neighbors of pCurrent
+			// go up
+			if (maze[row + 1][col].getPacmanSign() == SPACE && (maze[row + 1][col].getIsCoin() || maze[row + 1][col].getBoardInt() == GHOST || maze[row + 1][col].getBoardInt() == SPACE)) {
+				PacmanBFSCheckNeighbor(row + 1, col, pCurrent, ghostsFound, closestCoin, currentDepth);
+			}
+			// down
+			if (maze[row - 1][col].getPacmanSign() == SPACE && (maze[row - 1][col].getIsCoin() || maze[row - 1][col].getBoardInt() == GHOST || maze[row - 1][col].getBoardInt() == SPACE)) {
+				PacmanBFSCheckNeighbor(row - 1, col, pCurrent, ghostsFound, closestCoin, currentDepth);
+			}
+			// left
+			if (maze[row][col - 1].getPacmanSign() == SPACE && (maze[row][col - 1].getIsCoin() || maze[row][col - 1].getBoardInt() == GHOST || maze[row][col - 1].getBoardInt() == SPACE)) {
+				PacmanBFSCheckNeighbor(row, col - 1, pCurrent, ghostsFound, closestCoin, currentDepth);
+			}
+			// right
+			if (maze[row][col + 1].getPacmanSign() == SPACE && (maze[row][col + 1].getIsCoin() || maze[row][col + 1].getBoardInt() == GHOST || maze[row][col + 1].getBoardInt() == SPACE)) {
+				PacmanBFSCheckNeighbor(row, col + 1, pCurrent, ghostsFound, closestCoin, currentDepth);
+			}
 		}
 	}
 }
@@ -443,7 +450,6 @@ void idle() // always running
 		cleanAllPacmanSigns();
 		RunPacmanBFS(ghostsFound, closestCoin); // move pacman
 		pacmanDecide(ghostsFound, closestCoin);
-		Sleep(500);
 		for (int i = 0;i < NUM_GHOSTS;i++) {
 			CleanAllGhostSigns(i);
 			while (!GhostAStarPQ[i].empty())
@@ -452,6 +458,7 @@ void idle() // always running
 			GhostAStarPQ[i].push(ghostCell);
 			RunGhostAStar(i);
 		}
+		Sleep(500);
 	}
 	glutPostRedisplay(); // indirect call to display
 }
